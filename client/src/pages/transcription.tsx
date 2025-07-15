@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Play, Square, Mic, FileText, Check, Copy, Download, Settings, HelpCircle, Circle, Volume2, VolumeX, Languages } from "lucide-react";
+import { Play, Square, Mic, FileText, Check, Copy, Download, Settings, HelpCircle, Circle, Volume2, VolumeX, Languages, Package } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Transcription } from "@shared/schema";
 
