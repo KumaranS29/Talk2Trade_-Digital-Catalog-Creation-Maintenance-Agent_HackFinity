@@ -89,7 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Create transcription request
         const transcriptionRequest = await assemblyai.transcripts.transcribe({
-          audio_url: uploadResponse.upload_url,
+          audio_url: uploadResponse,
           language_detection: true,
           speech_model: "best"
         });
