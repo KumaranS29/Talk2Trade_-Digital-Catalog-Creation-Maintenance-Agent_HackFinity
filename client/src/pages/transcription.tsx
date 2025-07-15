@@ -5,16 +5,18 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Play, Square, Mic, FileText, Check, Copy, Download, Settings, HelpCircle, Circle } from "lucide-react";
+import { Play, Square, Mic, FileText, Check, Copy, Download, Settings, HelpCircle, Circle, Volume2, VolumeX } from "lucide-react";
 import type { Transcription } from "@shared/schema";
 
 export default function TranscriptionPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -160,6 +162,66 @@ export default function TranscriptionPage() {
   const handleTranslate = useCallback((text: string) => {
     translateMutation.mutate(text);
   }, [translateMutation]);
+
+  const handleTextToSpeech = useCallback((text: string) => {
+    if (isSpeaking) {
+      // Stop current speech
+      speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    // Check if speech synthesis is supported
+    if (!('speechSynthesis' in window)) {
+      toast({
+        title: "Not Supported",
+        description: "Text-to-speech is not supported in this browser.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      speechSynthesisRef.current = utterance;
+      
+      // Configure speech settings
+      utterance.rate = 0.8; // Slightly slower for better clarity
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      utterance.lang = 'en-US'; // English for translated text
+      
+      // Event listeners
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+      };
+      
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
+      
+      utterance.onerror = (event) => {
+        console.error('Speech synthesis error:', event);
+        setIsSpeaking(false);
+        toast({
+          title: "Speech Error",
+          description: "Failed to play text-to-speech.",
+          variant: "destructive",
+        });
+      };
+      
+      // Start speaking
+      speechSynthesis.speak(utterance);
+      
+    } catch (error) {
+      console.error('Text-to-speech error:', error);
+      toast({
+        title: "Speech Error",
+        description: "Failed to initialize text-to-speech.",
+        variant: "destructive",
+      });
+    }
+  }, [isSpeaking, toast]);
 
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
@@ -382,7 +444,23 @@ export default function TranscriptionPage() {
                             Original: {translationData.original_text}
                           </p>
                         )}
-                        <div className="flex items-center justify-end mt-3 pt-2 border-t border-slate-200">
+                        <div className="flex items-center justify-end mt-3 pt-2 border-t border-slate-200 space-x-3">
+                          <button
+                            onClick={() => handleTextToSpeech(translationData.translated_text)}
+                            className="text-xs text-green-600 hover:text-green-500 font-medium flex items-center"
+                          >
+                            {isSpeaking ? (
+                              <>
+                                <VolumeX className="w-3 h-3 mr-1" />
+                                Stop
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 className="w-3 h-3 mr-1" />
+                                Play
+                              </>
+                            )}
+                          </button>
                           <button
                             onClick={() => copyToClipboard(translationData.translated_text)}
                             className="text-xs text-primary hover:text-primary/80 font-medium"
@@ -417,11 +495,15 @@ export default function TranscriptionPage() {
                   <Check className="w-4 h-4 text-emerald-500" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">API Connection</span>
+                  <span className="text-sm text-slate-600">Transcription Service</span>
                   <Check className="w-4 h-4 text-emerald-500" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Transcription Service</span>
+                  <span className="text-sm text-slate-600">Translation Service</span>
+                  <Check className="w-4 h-4 text-emerald-500" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Text-to-Speech</span>
                   <Check className="w-4 h-4 text-emerald-500" />
                 </div>
               </div>

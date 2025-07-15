@@ -94,8 +94,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           audio_url: uploadResponse,
           language_detection: true,
           speech_model: "best",
-          language_code: "ta", // Set Tamil as primary language
-          boost_param: "high", // Boost accuracy for non-English languages
           filter_profanity: false,
           format_text: true
         });
