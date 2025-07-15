@@ -57,9 +57,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transcribe audio
   app.post("/api/transcribe", upload.single('audio'), async (req: Request & { file?: Express.Multer.File }, res) => {
     try {
+      console.log('Received transcribe request');
+      console.log('Request file:', req.file);
+      console.log('Request body:', req.body);
+      
       if (!req.file) {
+        console.log('No file in request');
         return res.status(400).json({ error: "No audio file provided" });
       }
+
+      console.log('File details:', {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path
+      });
 
       const audioFilePath = req.file.path;
       

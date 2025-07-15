@@ -24,8 +24,22 @@ export default function TranscriptionPage() {
 
   const transcribeMutation = useMutation({
     mutationFn: async (audioBlob: Blob) => {
+      console.log('Audio blob size:', audioBlob.size, 'type:', audioBlob.type);
+      
+      if (audioBlob.size === 0) {
+        throw new Error('No audio data recorded');
+      }
+      
       const formData = new FormData();
-      formData.append("audio", audioBlob, "recording.wav");
+      // Use appropriate file extension based on MIME type
+      let filename = "recording.webm";
+      if (audioBlob.type.includes('mp4')) {
+        filename = "recording.mp4";
+      } else if (audioBlob.type.includes('wav')) {
+        filename = "recording.wav";
+      }
+      
+      formData.append("audio", audioBlob, filename);
       
       const response = await apiRequest("POST", "/api/transcribe", formData);
       return response.json();
@@ -56,8 +70,18 @@ export default function TranscriptionPage() {
         } 
       });
       
+      // Try different MIME types in order of preference
+      let mimeType = 'audio/webm';
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus';
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        mimeType = 'audio/webm';
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4';
+      }
+
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+        mimeType: mimeType
       });
       
       mediaRecorderRef.current = mediaRecorder;
@@ -70,7 +94,7 @@ export default function TranscriptionPage() {
       };
       
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/wav' });
+        const blob = new Blob(chunksRef.current, { type: mimeType });
         setAudioBlob(blob);
         stream.getTracks().forEach(track => track.stop());
       };
