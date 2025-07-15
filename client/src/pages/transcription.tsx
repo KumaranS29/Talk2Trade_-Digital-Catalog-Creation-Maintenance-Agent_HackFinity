@@ -513,6 +513,54 @@ export default function TranscriptionPage() {
                     </div>
                   </div>
                 )}
+                
+                {/* Extracted Details Section */}
+                {translationData && translationData.extracted_details && (
+                  <div className="mt-6 border-l-4 border-purple-500 pl-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 mt-1">
+                        <Check className="text-purple-500 w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <p className="text-sm text-slate-600">Extracted Details:</p>
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                            AI Analysis
+                          </Badge>
+                        </div>
+                        <div className="space-y-2">
+                          {translationData.extracted_details.success ? (
+                            <div className="space-y-2">
+                              {Object.entries(translationData.extracted_details.details).map(([key, value]) => (
+                                <div key={key} className="flex items-start space-x-2">
+                                  <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded capitalize min-w-fit">
+                                    {key.replace(/_/g, ' ')}:
+                                  </span>
+                                  <span className="text-slate-900 text-sm">
+                                    {Array.isArray(value) ? value.join(', ') : String(value)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-slate-600 text-sm">
+                              {translationData.extracted_details.error || 'No details could be extracted'}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-end mt-3 pt-2 border-t border-slate-200">
+                          <button
+                            onClick={() => copyToClipboard(JSON.stringify(translationData.extracted_details, null, 2))}
+                            className="text-xs text-purple-600 hover:text-purple-500 font-medium"
+                          >
+                            <Copy className="w-3 h-3 mr-1 inline" />
+                            Copy Details
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

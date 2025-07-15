@@ -8,6 +8,7 @@ import fs from "fs";
 import path from "path";
 import translate from "translate-google";
 import { franc } from "franc-min";
+import OpenAI from "openai";
 
 const upload = multer({ 
   dest: 'uploads/',
@@ -265,11 +266,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log('Translation successful:', translatedText);
         
+        // Extract details using OpenAI
+        const extractedDetails = await extractDetailsFromText(translatedText);
+        
         res.json({
           detected_language: detectedLanguage,
           translated_text: translatedText,
           original_text: transcription,
-          processed_text: processedTranscription
+          processed_text: processedTranscription,
+          extracted_details: extractedDetails
         });
         
       } catch (translateError) {
@@ -285,6 +290,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Internal server error during translation" });
     }
   });
+
+  // Extract details from translated text using OpenAI
+  async function extractDetailsFromText(text: string) {
+    try {
+      if (!process.env.OPENAI_API_KEY) {
+        return { error: "OpenAI API key not configured" };
+      }
+
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert at extracting structured information from text. Extract key details from the given text and return them in a structured JSON format. Focus on items, quantities, prices, actions, people, places, and other meaningful information."
+          },
+          {
+            role: "user",
+            content: `Extract details from this text: "${text}". Return as JSON with categories like: items, quantities, prices, actions, people, places, and other relevant information.`
+          }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      const extractedData = JSON.parse(completion.choices[0].message.content || "{}");
+      
+      return {
+        success: true,
+        details: extractedData
+      };
+    } catch (error) {
+      console.error('Detail extraction failed:', error);
+      return {
+        success: false,
+        error: "Failed to extract details",
+        details: error.message
+      };
+    }
+  }
 
   const httpServer = createServer(app);
   return httpServer;
