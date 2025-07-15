@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Play, Square, Mic, FileText, Check, Copy, Download, Settings, HelpCircle, Circle, Volume2, VolumeX } from "lucide-react";
+import { Play, Square, Mic, FileText, Check, Copy, Download, Settings, HelpCircle, Circle, Volume2, VolumeX, Languages } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Transcription } from "@shared/schema";
 
 export default function TranscriptionPage() {
@@ -13,6 +14,7 @@ export default function TranscriptionPage() {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('ta'); // Default to Tamil
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -42,6 +44,7 @@ export default function TranscriptionPage() {
       }
       
       formData.append("audio", audioBlob, filename);
+      formData.append("language", selectedLanguage); // Add selected language
       
       const response = await apiRequest("POST", "/api/transcribe", formData);
       return response.json();
@@ -157,7 +160,7 @@ export default function TranscriptionPage() {
     if (audioBlob) {
       transcribeMutation.mutate(audioBlob);
     }
-  }, [audioBlob, transcribeMutation]);
+  }, [audioBlob, transcribeMutation, selectedLanguage]);
 
   const handleTranslate = useCallback((text: string) => {
     translateMutation.mutate(text);
@@ -239,6 +242,18 @@ export default function TranscriptionPage() {
 
   const latestTranscription = transcriptions[0];
   const translationData = translateMutation.data;
+  
+  // Language options for selection
+  const languageOptions = [
+    { value: 'ta', label: 'Tamil (தமிழ்)', assemblyCode: 'ta' },
+    { value: 'hi', label: 'Hindi (हिंदी)', assemblyCode: 'hi' },
+    { value: 'te', label: 'Telugu (తెలుగు)', assemblyCode: 'te' },
+    { value: 'ml', label: 'Malayalam (മലയാളം)', assemblyCode: 'ml' },
+    { value: 'kn', label: 'Kannada (ಕನ್ನಡ)', assemblyCode: 'kn' },
+    { value: 'mr', label: 'Marathi (मराठी)', assemblyCode: 'mr' },
+    { value: 'gu', label: 'Gujarati (ગુજરાતી)', assemblyCode: 'gu' },
+    { value: 'bn', label: 'Bengali (বাংলা)', assemblyCode: 'bn' },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -277,7 +292,29 @@ export default function TranscriptionPage() {
                   <Mic className={`text-2xl ${isRecording ? 'text-red-500' : 'text-slate-400'}`} />
                 </div>
                 <h2 className="text-2xl font-semibold text-slate-900 mb-2">Voice Recording</h2>
-                <p className="text-slate-600">Speak in any local language - Tamil, Hindi, or others</p>
+                <p className="text-slate-600">Select your language and speak clearly</p>
+              </div>
+
+              {/* Language Selection */}
+              <div className="mb-6">
+                <div className="flex items-center justify-center space-x-2 mb-3">
+                  <Languages className="w-5 h-5 text-slate-600" />
+                  <span className="text-sm font-medium text-slate-700">Language to Speak:</span>
+                </div>
+                <div className="max-w-md mx-auto">
+                  <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choose your language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {languageOptions.map((lang) => (
+                        <SelectItem key={lang.value} value={lang.value}>
+                          {lang.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {/* Recording Controls */}

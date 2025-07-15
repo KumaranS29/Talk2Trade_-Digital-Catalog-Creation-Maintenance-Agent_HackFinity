@@ -48,9 +48,10 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend Features
 - Audio recording with MediaRecorder API
-- File upload with drag-and-drop support
-- Real-time transcription display
-- Language detection and translation to English
+- Language selection dropdown (Tamil, Hindi, Telugu, Malayalam, Kannada, Marathi, Gujarati, Bengali)
+- Real-time transcription display in selected language
+- Translation to English with Google Translate
+- Text-to-speech playback for translated English text
 - Responsive design with mobile support
 - Toast notifications for user feedback
 - Copy-to-clipboard functionality for both transcription and translation
@@ -63,12 +64,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Data Flow
 
-1. **Audio Recording**: User records audio through browser MediaRecorder API
-2. **File Upload**: Audio blob sent to backend via multipart form data
-3. **Transcription**: Backend processes audio through OpenAI Whisper API
-4. **Storage**: Transcription results stored in PostgreSQL database
-5. **Display**: Frontend fetches and displays transcription results
-6. **State Management**: React Query handles caching and synchronization
+1. **Language Selection**: User selects language from dropdown (Tamil, Hindi, Telugu, etc.)
+2. **Audio Recording**: User records audio through browser MediaRecorder API
+3. **File Upload**: Audio blob and selected language sent to backend via multipart form data
+4. **Transcription**: Backend processes audio through AssemblyAI API with specific language code
+5. **Storage**: Transcription results stored in PostgreSQL database
+6. **Translation**: User can translate transcribed text to English using Google Translate
+7. **Text-to-Speech**: User can play English translation using browser's speech synthesis
+8. **Display**: Frontend fetches and displays transcription, translation, and speech controls
+9. **State Management**: React Query handles caching and synchronization
 
 ## External Dependencies
 
@@ -102,10 +106,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 15, 2025)
 - Switched from OpenAI Whisper to AssemblyAI for better pricing and quotas
+- Added language selection dropdown for 8 Indian languages (Tamil, Hindi, Telugu, Malayalam, Kannada, Marathi, Gujarati, Bengali)
+- Implemented specific language code transcription with AssemblyAI instead of auto-detection
 - Added Google Translate integration for English translation
-- Implemented enhanced language detection for Tamil, Hindi, Telugu, Malayalam, Kannada, Marathi
-- Added pattern matching for better Tamil language recognition
+- Implemented text-to-speech playback for translated English text
+- Enhanced pattern matching for Tamil language recognition
 - Post-processing improvements for common Tamil words (pudavai → saree, rupai → rupees)
+- Added comprehensive error correction for Tamil transcription mistakes
 
 ### File Structure
 ```

@@ -67,6 +67,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No audio file provided" });
       }
 
+      const selectedLanguage = req.body.language || 'ta'; // Default to Tamil
+      console.log('Selected language:', selectedLanguage);
+
       console.log('File details:', {
         originalname: req.file.originalname,
         mimetype: req.file.mimetype,
@@ -89,10 +92,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Upload file to AssemblyAI
         const uploadResponse = await assemblyai.files.upload(audioFilePath);
         
-        // Create transcription request with improved settings for Indian languages
+        // Create transcription request with specific language code
         const transcriptionRequest = await assemblyai.transcripts.transcribe({
           audio_url: uploadResponse,
-          language_detection: true,
+          language_code: selectedLanguage, // Use selected language
           speech_model: "best",
           filter_profanity: false,
           format_text: true
