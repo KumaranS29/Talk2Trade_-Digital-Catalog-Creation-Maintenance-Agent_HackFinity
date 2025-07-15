@@ -44,7 +44,7 @@ type ProductForm = z.infer<typeof productFormSchema>;
 
 export default function CatalogPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -66,7 +66,7 @@ export default function CatalogPage() {
       product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesCategory = !categoryFilter || product.category === categoryFilter;
+    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
     
     return matchesSearch && matchesCategory;
   });
@@ -273,7 +273,7 @@ export default function CatalogPage() {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
