@@ -1,0 +1,113 @@
+project "Talk2Trade", explained in simple but technically clear detail, so each teammate knows exactly what we’re building for this hackathon.
+________________________________________
+🧩 Full Feature Breakdown for Talk2Trade
+An AI-powered voice and text-based catalog assistant built for farmers, artisans, and kirana store owners to create, translate, and manage product listings easily with zero tech knowledge.
+________________________________________
+🔹 1. Voice Input in Local Language
+🎤 “Speak your product details – Talk2Trade will handle the rest.”
+What it does:
+•	Allows user to speak in regional languages (like Tamil, Hindi, Telugu, etc.) instead of typing.
+•	Uses AI speech-to-text engine (e.g., Whisper) to convert that into accurate text.
+Example:
+User speaks: “இது நாட்டுச் செவ்வியல் நெய், 500 மில்லி”
+System converts to: “This is 500ml organic desi ghee”
+Why it’s useful:
+Many sellers are not comfortable typing or don’t know English. This makes the tool inclusive and usable with just their voice.
+________________________________________
+🔹 2. Text Input (Optional for Skilled Users)
+⌨️ “Also supports manual text entry for those who prefer it.”
+What it does:
+•	User can type in local language or English directly.
+•	Supports Unicode input for Tamil, Hindi, Bengali, etc.
+Why it’s useful:
+Some shopkeepers' kids or younger people may want to enter things by typing. We offer both options.
+________________________________________
+🔹 3. Local Language to English Translation
+🌐 “Automatically converts local language to business-ready English.”
+What it does:
+•	After getting input (spoken or typed), the system translates it to market-ready English using GPT or Translate API.
+•	Handles code-mixed input (like “இது 1kg ராகி புடி”).
+Example:
+Input: “1 கிலோ ராகி புடி, நெய், கண்ணாடி பாட்டிலில்”
+Translated: “1 kg Ragi Flour and Ghee in a glass bottle”
+Why it’s useful:
+Online marketplaces and digital catalogs need standard English. This ensures listings are understood by broader customers.
+________________________________________
+🔹 4. AI-Powered Product Description Generator
+✍️ “From simple input to beautiful catalog-ready descriptions.”
+What it does:
+•	Converts minimal info (name + quantity + material) into full title, short description, and SEO description.
+•	Output looks professional and attractive.
+Example:
+Input: "Handmade soap, neem oil, 100g"
+Generated:
+•	Title: “Handmade Neem Oil Soap – 100g”
+•	Short: “Natural herbal soap, free of chemicals, made from neem oil.”
+•	SEO: “Pure neem oil soap ideal for skincare. 100g handmade herbal bar, chemical-free and eco-friendly.”
+Why it’s useful:
+Small sellers can’t write marketing content. This makes their listing look professional and competitive.
+________________________________________
+🔹 5. Automatic Product Category Mapping
+🧭 “Classifies product into correct category automatically.”
+What it does:
+•	Maps the product to a suitable e-commerce category like:
+o	Groceries > Oils > Ghee
+o	Handicrafts > Baskets > Bamboo
+•	Ensures the product fits online catalog requirements (like Amazon, ONDC, etc.)
+Why it’s useful:
+Sellers often don’t know what category to choose. This keeps things organized and ready for integration into platforms.
+________________________________________
+🔹 6. Catalog Creation & Listing Dashboard
+📋 “One place to view, edit, and manage all products.”
+What it does:
+•	After a product is added, it is shown in a dashboard as a list/grid:
+o	Product Title
+o	Price
+o	Stock Available
+o	Edit Button
+o	Last Updated Time
+•	Easy UI with responsive layout (mobile + kiosk)
+Why it’s useful:
+Helps sellers see all their stock at once, make quick edits, and stay on top of updates.
+________________________________________
+🔹 7. Inventory Quantity + Price Input (Manual or Voice)
+📦 “Track how much stock is left and at what price.”
+What it does:
+•	During product entry, seller can say or type:
+o	“Quantity: 10 packs”
+o	“Price: ₹120 per item”
+•	Stored in Supabase DB along with timestamp.
+Why it’s useful:
+Lets sellers maintain a digital stockbook — no need for pen & paper.
+________________________________________
+🔹 8. Reminders & Smart Notifications
+🔔 “Get alerts when products are outdated or running low.”
+What it does:
+•	Sends friendly reminder (on screen or notification):
+o	“You haven’t updated this product in 30 days.”
+o	“Stock of Handmade Soap is below 5.”
+•	Adds a red warning tag in dashboard UI.
+Why it’s useful:
+Many small sellers forget to update products. This helps them stay active and relevant in the digital catalog.
+________________________________________
+🔹 9. Offline Mode + Auto-Sync
+🔄 “Works without internet — syncs when back online.”
+What it does:
+•	Stores data locally if internet is off.
+•	When connection returns, auto-syncs to Supabase.
+•	Shows a status badge: “⏳ Pending Sync” or “✅ Synced”
+Why it’s useful:
+In rural areas, internet may be unreliable. This keeps Talk2Trade usable at all times.
+________________________________________
+🔹 10. Mobile-First UI with Kiosk View Support
+📱🖥️ “Designed to work on any device — phone, tablet, or digital kiosk.”
+What it does:
+•	Responsive layout with:
+o	Large buttons
+o	Voice icons
+o	Simple fonts
+o	Two modes:
+	Phone View
+	Kiosk View (touchscreen with large elements)
+Why it’s useful:
+Whether it's used by a village seller on their phone, or at a panchayat kiosk, the UI is clean and usable.
