@@ -440,9 +440,12 @@ export default function TranscriptionPage() {
                           {translationData.translated_text}
                         </p>
                         {translationData.original_text && (
-                          <p className="text-xs text-slate-500 mt-2">
-                            Original: {translationData.original_text}
-                          </p>
+                          <div className="mt-2 text-xs text-slate-500">
+                            <p>Original: {translationData.original_text}</p>
+                            {translationData.processed_text && translationData.processed_text !== translationData.original_text && (
+                              <p>Processed: {translationData.processed_text}</p>
+                            )}
+                          </div>
                         )}
                         <div className="flex items-center justify-end mt-3 pt-2 border-t border-slate-200 space-x-3">
                           <button

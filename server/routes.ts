@@ -179,9 +179,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enhanced language detection for Indian languages
       let detectedLanguage = 'ta'; // Default to Tamil
       
-      // Check for common Tamil words/patterns
+      // Pre-process transcription to fix common Tamil transcription errors
+      let processedTranscription = transcription
+        .replace(/purawai|buddha way|budha way/gi, 'pudavai')
+        .replace(/ainurubai|ainuru.*bai|ainu.*bai/gi, '500 rupai')
+        .replace(/in the|inthe/gi, 'intha')
+        .replace(/way/gi, 'vai');
+      
+      console.log('Original transcription:', transcription);
+      console.log('Processed transcription:', processedTranscription);
+      
+      // Check for common Tamil words/patterns (including common transcription errors)
       const tamilPatterns = [
         /pudavai|saree|வடிவம்|rupai|rupee|intha|இந்த|அந்த|antha/i,
+        /purawai|buddha way|budha way|ainurubai|ainuru.*bai/i, // Common transcription errors
         /வருகிறது|போகிறது|செய்கிறது|இருக்கிறது/i,
         /எவ்வளவு|எத்தனை|யாரு|என்ன|எங்கே/i
       ];
@@ -197,17 +208,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       try {
-        const detected = franc(transcription);
+        const detected = franc(processedTranscription);
         console.log('Franc detected language:', detected);
         
         // Enhanced pattern matching for better accuracy
-        if (tamilPatterns.some(pattern => pattern.test(transcription))) {
+        if (tamilPatterns.some(pattern => pattern.test(processedTranscription))) {
           detectedLanguage = 'ta';
           console.log('Tamil patterns detected');
-        } else if (hindiPatterns.some(pattern => pattern.test(transcription))) {
+        } else if (hindiPatterns.some(pattern => pattern.test(processedTranscription))) {
           detectedLanguage = 'hi';
           console.log('Hindi patterns detected');
-        } else if (teluguPatterns.some(pattern => pattern.test(transcription))) {
+        } else if (teluguPatterns.some(pattern => pattern.test(processedTranscription))) {
           detectedLanguage = 'te';
           console.log('Telugu patterns detected');
         } else {
@@ -233,26 +244,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Translate to English with context hints
       try {
-        let translatedText = await translate(transcription, { 
+        let translatedText = await translate(processedTranscription, { 
           from: detectedLanguage, 
           to: 'en' 
         });
         
         // Post-process translation for common Tamil/Indian language patterns
         translatedText = translatedText
-          .replace(/pudavai|purawai/gi, 'saree')
-          .replace(/rupai|rupee/gi, 'rupees')
-          .replace(/intha|antha/gi, 'this')
+          .replace(/pudavai|purawai|buddha way|budha way/gi, 'saree')
+          .replace(/rupai|rupee|ainurubai|ainuru.*bai/gi, 'rupees')
+          .replace(/intha|antha|in the/gi, 'this')
           .replace(/antha/gi, 'that')
           .replace(/evvalavu|etthanai/gi, 'how much')
-          .replace(/\b(\d+)\s*(rupai|rupee|rupees)\b/gi, '$1 rupees');
+          .replace(/\b(\d+)\s*(rupai|rupee|rupees)\b/gi, '$1 rupees')
+          .replace(/this\s+saree\s+rupees/gi, 'this saree costs rupees')
+          .replace(/this\s+saree\s+(\d+)\s+rupees/gi, 'this saree costs $1 rupees');
         
         console.log('Translation successful:', translatedText);
         
         res.json({
           detected_language: detectedLanguage,
           translated_text: translatedText,
-          original_text: transcription
+          original_text: transcription,
+          processed_text: processedTranscription
         });
         
       } catch (translateError) {
