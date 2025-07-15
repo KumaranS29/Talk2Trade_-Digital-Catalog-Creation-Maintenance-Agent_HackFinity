@@ -308,40 +308,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Extract details from translated text using OpenAI
+  // Extract details from translated text using OpenAI or fallback pattern matching
   async function extractDetailsFromText(text: string) {
-    try {
-      if (!process.env.OPENAI_API_KEY) {
-        return { error: "OpenAI API key not configured" };
+    // Try OpenAI first if available and quota allows
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const openai = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY
+        });
+
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert at extracting product catalog information from text. Extract product details and return them in JSON format with these fields: name (product name), description (auto-generated description), category, price (number only), quantity, unit, brand, color, size, material, origin (location mentioned), tags (array of keywords), confidence (0-1 score for extraction quality). If price currency is mentioned, include it. Focus on creating a structured product catalog entry."
+            },
+            {
+              role: "user",
+              content: `Extract product catalog details from this text: "${text}". Generate a compelling product description if the original text is brief. Return structured JSON for catalog entry.`
+            }
+          ],
+          response_format: { type: "json_object" }
+        });
+
+        const extractedData = JSON.parse(completion.choices[0].message.content || "{}");
+        
+        return {
+          success: true,
+          details: extractedData
+        };
+      } catch (error) {
+        console.error('OpenAI extraction failed, using pattern matching fallback:', error);
+        // Fall back to pattern matching
       }
+    }
 
-      const openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY
-      });
+    // Fallback: Pattern-based extraction for immediate functionality
+    console.log('Using pattern-based extraction for text:', text);
+    return extractWithPatterns(text);
+  }
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert at extracting product catalog information from text. Extract product details and return them in JSON format with these fields: name (product name), description (auto-generated description), category, price (number only), quantity, unit, brand, color, size, material, origin (location mentioned), tags (array of keywords), confidence (0-1 score for extraction quality). If price currency is mentioned, include it. Focus on creating a structured product catalog entry."
-          },
-          {
-            role: "user",
-            content: `Extract product catalog details from this text: "${text}". Generate a compelling product description if the original text is brief. Return structured JSON for catalog entry.`
-          }
-        ],
-        response_format: { type: "json_object" }
-      });
-
-      const extractedData = JSON.parse(completion.choices[0].message.content || "{}");
+  // Fallback pattern-based extraction
+  function extractWithPatterns(text: string) {
+    try {
+      const lowerText = text.toLowerCase();
+      
+      // Extract product name (first significant word/phrase)
+      let name = "Product";
+      const productWords = text.split(/\s+/).filter(word => 
+        word.length > 2 && !['this', 'that', 'the', 'and', 'or', 'at', 'in', 'on', 'for', 'with', 'is', 'are', 'costs', 'rupees', 'rupeess', 'dollars', 'price'].includes(word.toLowerCase())
+      );
+      if (productWords.length > 0) {
+        name = productWords.slice(0, 2).join(' ');
+      }
+      
+      // Extract price
+      let price = null;
+      const priceMatches = text.match(/(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:rupees|rupeess|dollars|inr|usd|₹|\$)/i);
+      if (priceMatches) {
+        price = parseFloat(priceMatches[1].replace(/,/g, ''));
+      }
+      
+      // Determine category based on keywords
+      let category = "General";
+      const categories = {
+        "Clothing": ["shirt", "dress", "pants", "saree", "blouse", "jacket", "coat", "skirt", "top", "bottom"],
+        "Electronics": ["phone", "laptop", "computer", "tablet", "tv", "camera", "headphones", "speaker"],
+        "Food": ["rice", "dal", "curry", "bread", "milk", "tea", "coffee", "snacks"],
+        "Home": ["furniture", "chair", "table", "bed", "sofa", "lamp", "mirror", "curtain"],
+        "Beauty": ["soap", "shampoo", "cream", "lotion", "perfume", "makeup", "lipstick"]
+      };
+      
+      for (const [cat, keywords] of Object.entries(categories)) {
+        if (keywords.some(keyword => lowerText.includes(keyword))) {
+          category = cat;
+          break;
+        }
+      }
+      
+      // Generate description
+      const description = `${name} - ${text.charAt(0).toUpperCase() + text.slice(1)}. High quality ${category.toLowerCase()} item${price ? ` priced at ${price} rupees` : ''}.`;
+      
+      // Extract colors
+      const colors = ["red", "blue", "green", "yellow", "black", "white", "pink", "purple", "orange", "brown", "grey", "gray"];
+      const color = colors.find(c => lowerText.includes(c)) || null;
+      
+      // Generate tags
+      const tags = [
+        category.toLowerCase(),
+        ...productWords.slice(0, 3).map(w => w.toLowerCase()),
+        ...(color ? [color] : []),
+        "voice-extracted"
+      ].filter((tag, index, arr) => arr.indexOf(tag) === index);
       
       return {
         success: true,
-        details: extractedData
+        details: {
+          name: name,
+          description: description,
+          category: category,
+          price: price,
+          currency: "INR",
+          quantity: 1,
+          unit: "pieces",
+          brand: null,
+          color: color,
+          size: null,
+          material: null,
+          origin: null,
+          tags: tags,
+          confidence: 0.7
+        }
       };
     } catch (error) {
-      console.error('Detail extraction failed:', error);
+      console.error('Pattern extraction failed:', error);
       return {
         success: false,
         error: "Failed to extract details",
