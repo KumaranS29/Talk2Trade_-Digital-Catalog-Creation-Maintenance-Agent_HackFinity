@@ -32,6 +32,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProductSchema } from "@shared/schema";
 import type { Product } from "@shared/schema";
 import { z } from "zod";
+import AdvancedDashboard from "@/components/AdvancedDashboard";
 
 // Form schema for product creation/editing - Talk2Trade format
 const productFormSchema = insertProductSchema.extend({
@@ -186,21 +187,21 @@ export default function CatalogPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-slate-200">
+      <header className="bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <Package className="text-white text-lg" />
+              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <Package className="text-white text-xl" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-slate-900">Product Catalog</h1>
-                <p className="text-sm text-slate-500">Manage your digital inventory</p>
+                <h1 className="text-2xl font-bold text-white">Talk2Trade Catalog</h1>
+                <p className="text-blue-100">Advanced AI-powered product management</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               {/* Stats */}
-              <div className="flex items-center space-x-4 text-sm text-slate-600">
+              <div className="flex items-center space-x-4 text-sm text-white/90">
                 <div className="flex items-center space-x-1">
                   <ShoppingBag className="w-4 h-4" />
                   <span>{stats.total} Products</span>
@@ -214,7 +215,7 @@ export default function CatalogPage() {
               {/* Create Product Button */}
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button className="bg-white text-blue-600 hover:bg-blue-50">
                     <Plus className="w-4 h-4 mr-2" />
                     Add Product
                   </Button>
@@ -280,28 +281,8 @@ export default function CatalogPage() {
           </div>
         </div>
 
-        {/* Statistics Cards - Talk2Trade format */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">🛒 Total Products</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">📂 Categories</CardTitle>
-              <Tag className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.categories}</div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Advanced Dashboard */}
+        <AdvancedDashboard products={products} />
 
         {/* Products Grid/List */}
         {productsLoading ? (
