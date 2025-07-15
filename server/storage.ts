@@ -8,13 +8,13 @@ export interface IStorage {
   getTranscriptions(): Promise<Transcription[]>;
   getTranscription(id: number): Promise<Transcription | undefined>;
   
-  // Product catalog operations
+  // Product catalog operations - optimized for Talk2Trade format
   createProduct(product: InsertProduct): Promise<Product>;
   getProducts(): Promise<Product[]>;
-  getProduct(id: number): Promise<Product | undefined>;
+  getProduct(id: string): Promise<Product | undefined>;
   getProductsByCategory(category: string): Promise<Product[]>;
-  updateProduct(id: number, updates: Partial<InsertProduct>): Promise<Product | undefined>;
-  deleteProduct(id: number): Promise<boolean>;
+  updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product | undefined>;
+  deleteProduct(id: string): Promise<boolean>;
   searchProducts(query: string): Promise<Product[]>;
 }
 
@@ -76,18 +76,13 @@ export class MemStorage implements IStorage {
     return this.transcriptions.get(id);
   }
 
-  // Product catalog methods
+  // Product catalog methods - optimized for Talk2Trade format
   async createProduct(insertProduct: InsertProduct): Promise<Product> {
-    const id = this.currentProductId++;
+    const id = `uuid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const product: Product = {
       ...insertProduct,
       id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      status: insertProduct.status ?? "draft",
-      currency: insertProduct.currency ?? "INR",
-      confidence: insertProduct.confidence ?? null,
-      tags: insertProduct.tags ?? [],
+      last_updated: new Date(),
     };
     this.products.set(id, product);
     return product;
@@ -95,11 +90,11 @@ export class MemStorage implements IStorage {
 
   async getProducts(): Promise<Product[]> {
     return Array.from(this.products.values()).sort(
-      (a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)
+      (a, b) => (b.last_updated?.getTime() || 0) - (a.last_updated?.getTime() || 0)
     );
   }
 
-  async getProduct(id: number): Promise<Product | undefined> {
+  async getProduct(id: string): Promise<Product | undefined> {
     return this.products.get(id);
   }
 
@@ -109,7 +104,7 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async updateProduct(id: number, updates: Partial<InsertProduct>): Promise<Product | undefined> {
+  async updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product | undefined> {
     const existingProduct = this.products.get(id);
     if (!existingProduct) {
       return undefined;
@@ -118,14 +113,14 @@ export class MemStorage implements IStorage {
     const updatedProduct: Product = {
       ...existingProduct,
       ...updates,
-      updatedAt: new Date(),
+      last_updated: new Date(),
     };
     
     this.products.set(id, updatedProduct);
     return updatedProduct;
   }
 
-  async deleteProduct(id: number): Promise<boolean> {
+  async deleteProduct(id: string): Promise<boolean> {
     return this.products.delete(id);
   }
 
@@ -133,13 +128,9 @@ export class MemStorage implements IStorage {
     const searchTerm = query.toLowerCase();
     return Array.from(this.products.values()).filter((product) => {
       return (
-        product.name?.toLowerCase().includes(searchTerm) ||
+        product.title?.toLowerCase().includes(searchTerm) ||
         product.description?.toLowerCase().includes(searchTerm) ||
-        product.category?.toLowerCase().includes(searchTerm) ||
-        product.brand?.toLowerCase().includes(searchTerm) ||
-        product.tags?.some(tag => tag.toLowerCase().includes(searchTerm)) ||
-        product.material?.toLowerCase().includes(searchTerm) ||
-        product.color?.toLowerCase().includes(searchTerm)
+        product.category?.toLowerCase().includes(searchTerm)
       );
     });
   }

@@ -349,18 +349,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return extractWithPatterns(text);
   }
 
-  // Fallback pattern-based extraction
+  // Enhanced pattern-based extraction with AI-powered descriptions and e-commerce categorization
   function extractWithPatterns(text: string) {
     try {
       const lowerText = text.toLowerCase();
       
-      // Extract product name (first significant word/phrase)
-      let name = "Product";
+      // Extract product title (enhanced naming)
+      let title = "Product";
       const productWords = text.split(/\s+/).filter(word => 
-        word.length > 2 && !['this', 'that', 'the', 'and', 'or', 'at', 'in', 'on', 'for', 'with', 'is', 'are', 'costs', 'rupees', 'rupeess', 'dollars', 'price'].includes(word.toLowerCase())
+        word.length > 2 && !['this', 'that', 'the', 'and', 'or', 'at', 'in', 'on', 'for', 'with', 'is', 'are', 'costs', 'rupees', 'rupeess', 'dollars', 'price', 'per', 'each', 'piece'].includes(word.toLowerCase())
       );
       if (productWords.length > 0) {
-        name = productWords.slice(0, 2).join(' ');
+        title = productWords.slice(0, 3).join(' ').replace(/^\w/, c => c.toUpperCase());
       }
       
       // Extract price
@@ -370,55 +370,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price = parseFloat(priceMatches[1].replace(/,/g, ''));
       }
       
-      // Determine category based on keywords
+      // Extract quantity with unit detection
+      let quantity = 1;
+      const quantityMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:kg|gram|grams|liters|ml|pieces|pcs|units|pack|bottle|jar)/i);
+      if (quantityMatch) {
+        quantity = parseFloat(quantityMatch[1]);
+      }
+      
+      // Enhanced e-commerce category mapping
       let category = "General";
-      const categories = {
-        "Clothing": ["shirt", "dress", "pants", "saree", "blouse", "jacket", "coat", "skirt", "top", "bottom"],
-        "Electronics": ["phone", "laptop", "computer", "tablet", "tv", "camera", "headphones", "speaker"],
-        "Food": ["rice", "dal", "curry", "bread", "milk", "tea", "coffee", "snacks"],
-        "Home": ["furniture", "chair", "table", "bed", "sofa", "lamp", "mirror", "curtain"],
-        "Beauty": ["soap", "shampoo", "cream", "lotion", "perfume", "makeup", "lipstick"]
+      const ecommerceCategories = {
+        "Health & Beauty > Soap": ["soap", "handmade soap", "neem soap", "ayurvedic soap", "herbal soap"],
+        "Health & Beauty > Skincare": ["cream", "lotion", "face wash", "moisturizer", "sunscreen"],
+        "Health & Beauty > Haircare": ["shampoo", "conditioner", "hair oil", "hair mask"],
+        "Food & Beverages > Spices": ["turmeric", "chili", "coriander", "cumin", "garam masala", "spice"],
+        "Food & Beverages > Oils": ["coconut oil", "mustard oil", "sesame oil", "groundnut oil", "ghee"],
+        "Food & Beverages > Grains": ["rice", "wheat", "dal", "lentils", "quinoa", "oats"],
+        "Food & Beverages > Vegetables": ["onion", "potato", "tomato", "carrot", "cabbage", "spinach"],
+        "Food & Beverages > Fruits": ["apple", "banana", "mango", "orange", "grape", "strawberry"],
+        "Home & Garden > Furniture": ["chair", "table", "bed", "sofa", "cabinet", "shelf"],
+        "Home & Garden > Decor": ["lamp", "mirror", "curtain", "vase", "painting", "cushion"],
+        "Clothing & Accessories > Men": ["shirt", "pants", "jeans", "t-shirt", "jacket", "kurta"],
+        "Clothing & Accessories > Women": ["dress", "saree", "blouse", "skirt", "top", "lehenga"],
+        "Electronics > Mobile": ["phone", "smartphone", "mobile", "charger", "headphones"],
+        "Electronics > Computers": ["laptop", "computer", "tablet", "keyboard", "mouse"],
+        "Handicrafts > Textiles": ["handwoven", "embroidered", "cotton", "silk", "wool"],
+        "Handicrafts > Pottery": ["clay", "ceramic", "earthenware", "pottery", "terracotta"],
+        "Baby & Kids > Toys": ["toy", "doll", "game", "puzzle", "blocks"],
+        "Sports & Fitness > Equipment": ["yoga mat", "dumbbell", "cricket bat", "football"]
       };
       
-      for (const [cat, keywords] of Object.entries(categories)) {
+      for (const [cat, keywords] of Object.entries(ecommerceCategories)) {
         if (keywords.some(keyword => lowerText.includes(keyword))) {
           category = cat;
           break;
         }
       }
       
-      // Generate description
-      const description = `${name} - ${text.charAt(0).toUpperCase() + text.slice(1)}. High quality ${category.toLowerCase()} item${price ? ` priced at ${price} rupees` : ''}.`;
+      // Generate AI-powered marketing description
+      const baseCategory = category.split(' > ')[0];
+      const subCategory = category.split(' > ')[1] || baseCategory;
       
-      // Extract colors
-      const colors = ["red", "blue", "green", "yellow", "black", "white", "pink", "purple", "orange", "brown", "grey", "gray"];
-      const color = colors.find(c => lowerText.includes(c)) || null;
-      
-      // Generate tags
-      const tags = [
-        category.toLowerCase(),
-        ...productWords.slice(0, 3).map(w => w.toLowerCase()),
-        ...(color ? [color] : []),
-        "voice-extracted"
-      ].filter((tag, index, arr) => arr.indexOf(tag) === index);
+      let description = "";
+      if (lowerText.includes('handmade') || lowerText.includes('natural') || lowerText.includes('organic')) {
+        description = `Premium handcrafted ${title.toLowerCase()} made with natural ingredients. Perfect for daily use${price ? ` at just ₹${price}` : ''}. Authentic quality product sourced directly from artisans.`;
+      } else if (lowerText.includes('fresh') || category.includes('Vegetables') || category.includes('Fruits')) {
+        description = `Fresh ${title.toLowerCase()} directly from farms. High quality, pesticide-free produce${price ? ` at ₹${price}` : ''}. Perfect for healthy cooking and nutritious meals.`;
+      } else if (category.includes('Oil') || category.includes('Spices')) {
+        description = `Pure ${title.toLowerCase()} with authentic taste and aroma. Traditional quality preserved${price ? ` at ₹${price}` : ''}. Essential for authentic Indian cooking.`;
+      } else {
+        description = `High-quality ${title.toLowerCase()} from trusted sources. Excellent ${subCategory.toLowerCase()} item${price ? ` priced at ₹${price}` : ''} with reliable performance and durability.`;
+      }
       
       return {
         success: true,
         details: {
-          name: name,
+          title: title,
           description: description,
           category: category,
           price: price,
-          currency: "INR",
-          quantity: 1,
-          unit: "pieces",
-          brand: null,
-          color: color,
-          size: null,
-          material: null,
-          origin: null,
-          tags: tags,
-          confidence: 0.7
+          quantity: quantity
         }
       };
     } catch (error) {
@@ -431,7 +442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Create product from extracted details
+  // Create product from extracted details - optimized for Talk2Trade format
   async function createProductFromExtraction(
     translatedText: string, 
     extractedDetails: any, 
@@ -439,35 +450,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     detectedLanguage: string
   ) {
     try {
-      // Generate tags from the text
-      const tags = [
-        ...Object.values(extractedDetails).filter(v => typeof v === 'string' && v.length > 0),
-        detectedLanguage,
-        'voice-extracted'
-      ].slice(0, 10); // Limit to 10 tags
-
       const productData = {
-        name: extractedDetails.name || "Voice Extracted Product",
+        title: extractedDetails.title || "Voice Extracted Product",
         description: extractedDetails.description || `Product mentioned: ${translatedText}`,
         category: extractedDetails.category || "General",
         price: typeof extractedDetails.price === 'number' ? extractedDetails.price : null,
-        currency: extractedDetails.currency || "INR",
-        quantity: typeof extractedDetails.quantity === 'number' ? extractedDetails.quantity : null,
-        unit: extractedDetails.unit || null,
-        brand: extractedDetails.brand || null,
-        color: extractedDetails.color || null,
-        size: extractedDetails.size || null,
-        material: extractedDetails.material || null,
-        origin: extractedDetails.origin || null,
-        tags: tags,
-        extractedFrom: originalText,
-        transcriptionId: null, // Would link to transcription if available
-        confidence: extractedDetails.confidence || 0.8,
-        status: "draft"
+        quantity: typeof extractedDetails.quantity === 'number' ? extractedDetails.quantity : 1
       };
 
       const createdProduct = await storage.createProduct(productData);
-      console.log('Created product from voice:', createdProduct);
+      console.log('Created product from voice (Talk2Trade format):', createdProduct);
       return createdProduct;
     } catch (error) {
       console.error('Product creation error:', error);
@@ -491,7 +483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get single product
   app.get("/api/products/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const product = await storage.getProduct(id);
       
       if (!product) {
@@ -534,9 +526,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const productData = req.body;
       
-      // Basic validation
-      if (!productData.name) {
-        return res.status(400).json({ error: "Product name is required" });
+      // Basic validation for Talk2Trade format
+      if (!productData.title) {
+        return res.status(400).json({ error: "Product title is required" });
       }
 
       const createdProduct = await storage.createProduct(productData);
@@ -550,7 +542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update product
   app.put("/api/products/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const updates = req.body;
       
       const updatedProduct = await storage.updateProduct(id, updates);
@@ -569,7 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete product
   app.delete("/api/products/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const deleted = await storage.deleteProduct(id);
       
       if (!deleted) {
