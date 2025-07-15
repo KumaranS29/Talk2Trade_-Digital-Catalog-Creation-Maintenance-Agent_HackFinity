@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertTranscriptionSchema } from "@shared/schema";
 import multer from "multer";
-import OpenAI from "openai";
+import { AssemblyAI } from "assemblyai";
 import fs from "fs";
 import path from "path";
 
@@ -20,9 +20,8 @@ const upload = multer({
   }
 });
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_KEY || ""
+const assemblyai = new AssemblyAI({
+  apiKey: process.env.ASSEMBLYAI_API_KEY || ""
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -75,22 +74,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const audioFilePath = req.file.path;
       
-      // Check if OpenAI API key is configured
-      if (!process.env.OPENAI_API_KEY && !process.env.OPENAI_KEY) {
+      // Check if AssemblyAI API key is configured
+      if (!process.env.ASSEMBLYAI_API_KEY) {
         // Clean up uploaded file
         fs.unlinkSync(audioFilePath);
         return res.status(500).json({ 
-          error: "OpenAI API key not configured. Please add OPENAI_API_KEY to your environment variables." 
+          error: "AssemblyAI API key not configured. Please add ASSEMBLYAI_API_KEY to your environment variables." 
         });
       }
 
       try {
-        const audioReadStream = fs.createReadStream(audioFilePath);
-
-        const transcription = await openai.audio.transcriptions.create({
-          file: audioReadStream,
-          model: "whisper-1",
-          response_format: "verbose_json",
+        // Upload file to AssemblyAI
+        const uploadResponse = await assemblyai.files.upload(audioFilePath);
+        
+        // Create transcription request
+        const transcriptionRequest = await assemblyai.transcripts.transcribe({
+          audio_url: uploadResponse.upload_url,
+          language_detection: true,
+          speech_model: "best"
         });
 
         // Clean up uploaded file
@@ -98,35 +99,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Save transcription to storage
         const savedTranscription = await storage.createTranscription({
-          text: transcription.text,
-          language: transcription.language || "unknown",
-          confidence: null, // Whisper doesn't provide confidence scores
-          duration: transcription.duration || null,
+          text: transcriptionRequest.text || "",
+          language: transcriptionRequest.language_code || "unknown",
+          confidence: transcriptionRequest.confidence || null,
+          duration: transcriptionRequest.audio_duration || null,
         });
 
         res.json({
           id: savedTranscription.id,
-          text: transcription.text,
-          language: transcription.language || "unknown",
-          duration: transcription.duration || 0,
+          text: transcriptionRequest.text || "",
+          language: transcriptionRequest.language_code || "unknown",
+          duration: transcriptionRequest.audio_duration || 0,
           createdAt: savedTranscription.createdAt,
         });
 
-      } catch (openaiError: any) {
+      } catch (assemblyError: any) {
         // Clean up uploaded file on error
-        fs.unlinkSync(audioFilePath);
+        if (fs.existsSync(audioFilePath)) {
+          fs.unlinkSync(audioFilePath);
+        }
         
-        console.error("OpenAI API Error:", openaiError);
+        console.error("AssemblyAI API Error:", assemblyError);
         
-        if (openaiError.status === 401) {
+        if (assemblyError.status === 401) {
           return res.status(401).json({ 
-            error: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
+            error: "Invalid AssemblyAI API key. Please check your ASSEMBLYAI_API_KEY environment variable." 
           });
         }
         
-        if (openaiError.status === 429) {
+        if (assemblyError.status === 429) {
           return res.status(429).json({ 
-            error: "OpenAI API rate limit exceeded. Please try again later." 
+            error: "AssemblyAI API rate limit exceeded. Please try again later." 
           });
         }
         
