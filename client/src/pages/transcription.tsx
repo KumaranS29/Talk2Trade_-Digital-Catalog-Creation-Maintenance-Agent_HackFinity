@@ -60,6 +60,28 @@ export default function TranscriptionPage() {
     },
   });
 
+  const translateMutation = useMutation({
+    mutationFn: async (transcriptionText: string) => {
+      const response = await apiRequest("POST", "/api/translate", {
+        transcription: transcriptionText
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Translation Complete",
+        description: `Translated from ${data.detected_language} to English`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Translation Failed", 
+        description: error.message || "Failed to translate text. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -135,6 +157,10 @@ export default function TranscriptionPage() {
     }
   }, [audioBlob, transcribeMutation]);
 
+  const handleTranslate = useCallback((text: string) => {
+    translateMutation.mutate(text);
+  }, [translateMutation]);
+
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
     toast({
@@ -150,6 +176,7 @@ export default function TranscriptionPage() {
   };
 
   const latestTranscription = transcriptions[0];
+  const translationData = translateMutation.data;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -302,6 +329,13 @@ export default function TranscriptionPage() {
                           </span>
                           <div className="flex items-center space-x-2">
                             <button
+                              onClick={() => handleTranslate(latestTranscription.text)}
+                              disabled={translateMutation.isPending}
+                              className="text-xs text-blue-600 hover:text-blue-500 font-medium"
+                            >
+                              {translateMutation.isPending ? 'Translating...' : 'Translate'}
+                            </button>
+                            <button
                               onClick={() => copyToClipboard(latestTranscription.text)}
                               className="text-xs text-primary hover:text-primary/80 font-medium"
                             >
@@ -317,6 +351,37 @@ export default function TranscriptionPage() {
                   <div className="text-center py-8">
                     <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                     <p className="text-slate-500">Your transcribed text will appear here</p>
+                  </div>
+                )}
+                
+                {/* Translation Results */}
+                {translationData && (
+                  <div className="mt-6 border-l-4 border-green-500 pl-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 mt-1">
+                        <Check className="text-green-500 w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <p className="text-sm text-slate-600">English Translation:</p>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            {translationData.detected_language}
+                          </Badge>
+                        </div>
+                        <p className="text-slate-900 font-medium leading-relaxed">
+                          {translationData.translated_text}
+                        </p>
+                        <div className="flex items-center justify-end mt-3 pt-2 border-t border-slate-200">
+                          <button
+                            onClick={() => copyToClipboard(translationData.translated_text)}
+                            className="text-xs text-primary hover:text-primary/80 font-medium"
+                          >
+                            <Copy className="w-3 h-3 mr-1 inline" />
+                            Copy Translation
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

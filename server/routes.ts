@@ -6,6 +6,8 @@ import multer from "multer";
 import { AssemblyAI } from "assemblyai";
 import fs from "fs";
 import path from "path";
+import translate from "translate-google";
+import { franc } from "franc-min";
 
 const upload = multer({ 
   dest: 'uploads/',
@@ -158,6 +160,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ error: "Internal server error during transcription" });
+    }
+  });
+
+  // Translate transcription
+  app.post("/api/translate", async (req, res) => {
+    try {
+      const { transcription } = req.body;
+      
+      if (!transcription || typeof transcription !== 'string') {
+        return res.status(400).json({ error: "Transcription text is required" });
+      }
+
+      console.log('Received translation request for:', transcription);
+
+      // Language detection with franc-min
+      let detectedLanguage = 'ta'; // Default to Tamil
+      try {
+        const detected = franc(transcription);
+        
+        // Map franc language codes to our supported languages
+        const languageMap: Record<string, string> = {
+          'tam': 'ta',  // Tamil
+          'tel': 'te',  // Telugu  
+          'hin': 'hi',  // Hindi
+          'mal': 'ml',  // Malayalam
+          'kan': 'kn',  // Kannada
+          'mar': 'mr',  // Marathi
+        };
+        
+        if (languageMap[detected]) {
+          detectedLanguage = languageMap[detected];
+        }
+        
+        console.log('Detected language code:', detected, 'mapped to:', detectedLanguage);
+      } catch (detectionError) {
+        console.log('Language detection failed, using default Tamil:', detectionError);
+      }
+
+      // Translate to English
+      try {
+        const translatedText = await translate(transcription, { 
+          from: detectedLanguage, 
+          to: 'en' 
+        });
+        
+        console.log('Translation successful:', translatedText);
+        
+        res.json({
+          detected_language: detectedLanguage,
+          translated_text: translatedText
+        });
+        
+      } catch (translateError) {
+        console.error('Translation error:', translateError);
+        res.status(500).json({ 
+          error: "Translation failed. Please try again.",
+          detected_language: detectedLanguage
+        });
+      }
+      
+    } catch (error) {
+      console.error('Translation request error:', error);
+      res.status(500).json({ error: "Internal server error during translation" });
     }
   });
 
