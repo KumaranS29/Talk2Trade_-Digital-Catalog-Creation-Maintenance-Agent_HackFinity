@@ -266,8 +266,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log('Translation successful:', translatedText);
         
-        // Extract details using OpenAI
-        const extractedDetails = await extractDetailsFromText(translatedText);
+        // Extract details using OpenAI - use original text if English, otherwise use translation
+        const textForExtraction = detectedLanguage === 'en' ? processedTranscription : translatedText;
+        const extractedDetails = await extractDetailsFromText(textForExtraction);
         
         // Auto-create product catalog entry if extraction was successful
         let createdProduct = null;
@@ -354,20 +355,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const lowerText = text.toLowerCase();
       
-      // Extract product title (enhanced naming)
+      // Extract product title (enhanced naming) - Fix for fruits/vegetables
       let title = "Product";
+      const excludeWords = ['this', 'that', 'the', 'and', 'or', 'at', 'in', 'on', 'for', 'with', 'is', 'are', 'costs', 'rupees', 'rupeess', 'dollars', 'price', 'per', 'each', 'piece', 'from', 'quality', 'high', 'good', 'fresh', 'organic', 'natural'];
       const productWords = text.split(/\s+/).filter(word => 
-        word.length > 2 && !['this', 'that', 'the', 'and', 'or', 'at', 'in', 'on', 'for', 'with', 'is', 'are', 'costs', 'rupees', 'rupeess', 'dollars', 'price', 'per', 'each', 'piece'].includes(word.toLowerCase())
+        word.length > 2 && !excludeWords.includes(word.toLowerCase()) && !/^\d+$/.test(word)
       );
+      
+      // Clean title by removing price numbers and currency symbols
       if (productWords.length > 0) {
-        title = productWords.slice(0, 3).join(' ').replace(/^\w/, c => c.toUpperCase());
+        let cleanTitle = productWords.slice(0, 2).join(' ').replace(/[₹$]/g, '').trim();
+        // Remove trailing numbers that might be prices and common price-related words
+        cleanTitle = cleanTitle.replace(/\s+\d+$/, '').replace(/\s+(rupees|rupeess|dollars|price|cost|each|per|only)$/i, '');
+        title = cleanTitle.replace(/^\w/, c => c.toUpperCase());
       }
       
-      // Extract price
+      // Extract price - enhanced pattern matching
       let price = null;
-      const priceMatches = text.match(/(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:rupees|rupeess|dollars|inr|usd|₹|\$)/i);
-      if (priceMatches) {
-        price = parseFloat(priceMatches[1].replace(/,/g, ''));
+      const pricePatterns = [
+        /(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:rupees|rupeess|dollars|inr|usd|₹|\$)/i,
+        /(?:price|cost|costs|for|₹|\$)\s*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:each|per|only)/i
+      ];
+      
+      for (const pattern of pricePatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          price = parseFloat(match[1].replace(/,/g, ''));
+          break;
+        }
       }
       
       // Extract quantity with unit detection
@@ -386,8 +402,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "Food & Beverages > Spices": ["turmeric", "chili", "coriander", "cumin", "garam masala", "spice"],
         "Food & Beverages > Oils": ["coconut oil", "mustard oil", "sesame oil", "groundnut oil", "ghee"],
         "Food & Beverages > Grains": ["rice", "wheat", "dal", "lentils", "quinoa", "oats"],
-        "Food & Beverages > Vegetables": ["onion", "potato", "tomato", "carrot", "cabbage", "spinach"],
-        "Food & Beverages > Fruits": ["apple", "banana", "mango", "orange", "grape", "strawberry"],
+        "Food & Beverages > Vegetables": ["onion", "anian", "potato", "tomato", "carrot", "cabbage", "spinach", "brinjal", "okra", "cauliflower", "peas", "beans", "cucumber", "bitter gourd", "bottle gourd", "drumstick", "radish", "beetroot", "turnip", "ginger", "garlic", "green chili", "red chili"],
+        "Food & Beverages > Fruits": ["apple", "banana", "mango", "orange", "grape", "strawberry", "pomegranate", "watermelon", "papaya", "guava", "pineapple", "coconut", "lemon", "lime", "sweet lime", "custard apple", "jackfruit", "fig", "dates", "raisins", "almonds", "cashew", "walnut"],
         "Home & Garden > Furniture": ["chair", "table", "bed", "sofa", "cabinet", "shelf"],
         "Home & Garden > Decor": ["lamp", "mirror", "curtain", "vase", "painting", "cushion"],
         "Clothing & Accessories > Men": ["shirt", "pants", "jeans", "t-shirt", "jacket", "kurta"],

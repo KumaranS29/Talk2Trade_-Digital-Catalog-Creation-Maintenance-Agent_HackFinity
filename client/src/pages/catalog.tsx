@@ -280,11 +280,11 @@ export default function CatalogPage() {
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* Statistics Cards - Talk2Trade format */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+              <CardTitle className="text-sm font-medium">🛒 Total Products</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -294,27 +294,7 @@ export default function CatalogPage() {
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Published</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.published}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Draft</CardTitle>
-              <Edit className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.draft}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Categories</CardTitle>
+              <CardTitle className="text-sm font-medium">📂 Categories</CardTitle>
               <Tag className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -393,6 +373,19 @@ function ProductCard({ product, viewMode, onEdit, onDelete }: ProductCardProps) 
     return new Date(dateString).toLocaleDateString();
   };
 
+  const getStatusBadge = () => {
+    // Innovative status based on product freshness and availability
+    if (product.category?.includes("Fruits") || product.category?.includes("Vegetables")) {
+      return <Badge className="bg-green-100 text-green-800">🌱 Fresh</Badge>;
+    } else if (product.category?.includes("Handicrafts")) {
+      return <Badge className="bg-purple-100 text-purple-800">🎨 Handcrafted</Badge>;
+    } else if (product.category?.includes("Health")) {
+      return <Badge className="bg-blue-100 text-blue-800">💊 Wellness</Badge>;
+    } else {
+      return <Badge className="bg-orange-100 text-orange-800">⚡ Available</Badge>;
+    }
+  };
+
   if (viewMode === "list") {
     return (
       <Card className="p-4">
@@ -409,9 +402,7 @@ function ProductCard({ product, viewMode, onEdit, onDelete }: ProductCardProps) 
               </div>
             </div>
             <div>
-              <Badge className="bg-green-100 text-green-800">
-                Active
-              </Badge>
+              {getStatusBadge()}
             </div>
             <div className="text-sm text-slate-500">
               {formatDate(product.last_updated)}
@@ -438,9 +429,7 @@ function ProductCard({ product, viewMode, onEdit, onDelete }: ProductCardProps) 
             <CardTitle className="text-lg">{product.title}</CardTitle>
             <p className="text-sm text-slate-500 mt-1">{product.category}</p>
           </div>
-          <Badge className="bg-green-100 text-green-800">
-            Active
-          </Badge>
+          {getStatusBadge()}
         </div>
       </CardHeader>
       
@@ -452,8 +441,7 @@ function ProductCard({ product, viewMode, onEdit, onDelete }: ProductCardProps) 
           
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-1">
-              <DollarSign className="w-4 h-4 text-slate-400" />
-              <span className="font-medium">{formatPrice(product.price)}</span>
+              <span className="font-medium text-green-600">{formatPrice(product.price)}</span>
             </div>
             {product.quantity && (
               <span className="text-sm text-slate-500">
