@@ -89,11 +89,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Upload file to AssemblyAI
         const uploadResponse = await assemblyai.files.upload(audioFilePath);
         
-        // Create transcription request
+        // Create transcription request with improved settings for Indian languages
         const transcriptionRequest = await assemblyai.transcripts.transcribe({
           audio_url: uploadResponse,
           language_detection: true,
-          speech_model: "best"
+          speech_model: "best",
+          language_code: "ta", // Set Tamil as primary language
+          boost_param: "high", // Boost accuracy for non-English languages
+          filter_profanity: false,
+          format_text: true
         });
 
         // Clean up uploaded file
@@ -174,42 +178,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('Received translation request for:', transcription);
 
-      // Language detection with franc-min
+      // Enhanced language detection for Indian languages
       let detectedLanguage = 'ta'; // Default to Tamil
+      
+      // Check for common Tamil words/patterns
+      const tamilPatterns = [
+        /pudavai|saree|வடிவம்|rupai|rupee|intha|இந்த|அந்த|antha/i,
+        /வருகிறது|போகிறது|செய்கிறது|இருக்கிறது/i,
+        /எவ்வளவு|எத்தனை|யாரு|என்ன|எங்கே/i
+      ];
+      
+      const hindiPatterns = [
+        /kya|hai|nahi|hum|tum|यह|वह|है|नहीं/i,
+        /rupaye|paisa|kitna|कितना|रुपये|पैसा/i
+      ];
+      
+      const teluguPatterns = [
+        /ela|enti|ekkada|Telugu|తెలుగు|ఎలా|ఎంత/i,
+        /rupayalu|రుపాయలు|ఇంత|అంత/i
+      ];
+      
       try {
         const detected = franc(transcription);
+        console.log('Franc detected language:', detected);
         
-        // Map franc language codes to our supported languages
-        const languageMap: Record<string, string> = {
-          'tam': 'ta',  // Tamil
-          'tel': 'te',  // Telugu  
-          'hin': 'hi',  // Hindi
-          'mal': 'ml',  // Malayalam
-          'kan': 'kn',  // Kannada
-          'mar': 'mr',  // Marathi
-        };
-        
-        if (languageMap[detected]) {
-          detectedLanguage = languageMap[detected];
+        // Enhanced pattern matching for better accuracy
+        if (tamilPatterns.some(pattern => pattern.test(transcription))) {
+          detectedLanguage = 'ta';
+          console.log('Tamil patterns detected');
+        } else if (hindiPatterns.some(pattern => pattern.test(transcription))) {
+          detectedLanguage = 'hi';
+          console.log('Hindi patterns detected');
+        } else if (teluguPatterns.some(pattern => pattern.test(transcription))) {
+          detectedLanguage = 'te';
+          console.log('Telugu patterns detected');
+        } else {
+          // Fall back to franc detection
+          const languageMap: Record<string, string> = {
+            'tam': 'ta',  // Tamil
+            'tel': 'te',  // Telugu  
+            'hin': 'hi',  // Hindi
+            'mal': 'ml',  // Malayalam
+            'kan': 'kn',  // Kannada
+            'mar': 'mr',  // Marathi
+          };
+          
+          if (languageMap[detected]) {
+            detectedLanguage = languageMap[detected];
+          }
         }
         
-        console.log('Detected language code:', detected, 'mapped to:', detectedLanguage);
+        console.log('Final detected language:', detectedLanguage);
       } catch (detectionError) {
         console.log('Language detection failed, using default Tamil:', detectionError);
       }
 
-      // Translate to English
+      // Translate to English with context hints
       try {
-        const translatedText = await translate(transcription, { 
+        let translatedText = await translate(transcription, { 
           from: detectedLanguage, 
           to: 'en' 
         });
+        
+        // Post-process translation for common Tamil/Indian language patterns
+        translatedText = translatedText
+          .replace(/pudavai|purawai/gi, 'saree')
+          .replace(/rupai|rupee/gi, 'rupees')
+          .replace(/intha|antha/gi, 'this')
+          .replace(/antha/gi, 'that')
+          .replace(/evvalavu|etthanai/gi, 'how much')
+          .replace(/\b(\d+)\s*(rupai|rupee|rupees)\b/gi, '$1 rupees');
         
         console.log('Translation successful:', translatedText);
         
         res.json({
           detected_language: detectedLanguage,
-          translated_text: translatedText
+          translated_text: translatedText,
+          original_text: transcription
         });
         
       } catch (translateError) {

@@ -365,12 +365,23 @@ export default function TranscriptionPage() {
                         <div className="flex items-center space-x-2 mb-2">
                           <p className="text-sm text-slate-600">English Translation:</p>
                           <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            {translationData.detected_language}
+                            {translationData.detected_language === 'ta' ? 'Tamil' : 
+                             translationData.detected_language === 'hi' ? 'Hindi' :
+                             translationData.detected_language === 'te' ? 'Telugu' :
+                             translationData.detected_language === 'ml' ? 'Malayalam' :
+                             translationData.detected_language === 'kn' ? 'Kannada' :
+                             translationData.detected_language === 'mr' ? 'Marathi' :
+                             translationData.detected_language}
                           </Badge>
                         </div>
                         <p className="text-slate-900 font-medium leading-relaxed">
                           {translationData.translated_text}
                         </p>
+                        {translationData.original_text && (
+                          <p className="text-xs text-slate-500 mt-2">
+                            Original: {translationData.original_text}
+                          </p>
+                        )}
                         <div className="flex items-center justify-end mt-3 pt-2 border-t border-slate-200">
                           <button
                             onClick={() => copyToClipboard(translationData.translated_text)}

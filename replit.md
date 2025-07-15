@@ -1,8 +1,8 @@
-# Audio Transcription App
+# Audio Transcription & Translation App
 
 ## Overview
 
-This is a full-stack audio transcription application built with React (frontend) and Express.js (backend). The app allows users to record audio, upload audio files, and get transcriptions using OpenAI's Whisper API. It features a modern UI built with shadcn/ui components and TailwindCSS.
+This is a full-stack audio transcription and translation application built with React (frontend) and Express.js (backend). The app allows users to record audio in local languages (Tamil, Hindi, Telugu, etc.), get transcriptions using AssemblyAI, and translate the results to English using Google Translate. It features a modern UI built with shadcn/ui components and TailwindCSS.
 
 ## User Preferences
 
@@ -25,7 +25,7 @@ Preferred communication style: Simple, everyday language.
 - **Database**: PostgreSQL with Drizzle ORM
 - **Database Provider**: Neon Database (@neondatabase/serverless)
 - **File Upload**: Multer for handling multipart/form-data
-- **AI Integration**: OpenAI API for audio transcription
+- **AI Integration**: AssemblyAI API for audio transcription, Google Translate for translation
 
 ### Build System
 - **Frontend**: Vite with React plugin
@@ -44,14 +44,16 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/transcriptions` - Retrieve all transcriptions
 - `GET /api/transcriptions/:id` - Get single transcription
 - `POST /api/transcribe` - Upload audio file and get transcription
+- `POST /api/translate` - Translate transcribed text to English
 
 ### Frontend Features
 - Audio recording with MediaRecorder API
 - File upload with drag-and-drop support
 - Real-time transcription display
+- Language detection and translation to English
 - Responsive design with mobile support
 - Toast notifications for user feedback
-- Copy-to-clipboard functionality
+- Copy-to-clipboard functionality for both transcription and translation
 
 ### UI Components
 - Complete shadcn/ui component library
@@ -71,7 +73,9 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Core Dependencies
-- **OpenAI**: Audio transcription via Whisper API
+- **AssemblyAI**: Audio transcription API
+- **Google Translate**: Text translation service
+- **Franc-min**: Language detection library
 - **Neon Database**: Serverless PostgreSQL hosting
 - **Drizzle ORM**: Type-safe database operations
 - **React Query**: Server state management
@@ -93,8 +97,15 @@ Preferred communication style: Simple, everyday language.
 
 ### Environment Configuration
 - Database URL required for PostgreSQL connection
-- OpenAI API key required for transcription functionality
+- AssemblyAI API key required for transcription functionality
 - Environment-specific settings for development vs production
+
+## Recent Changes (July 15, 2025)
+- Switched from OpenAI Whisper to AssemblyAI for better pricing and quotas
+- Added Google Translate integration for English translation
+- Implemented enhanced language detection for Tamil, Hindi, Telugu, Malayalam, Kannada, Marathi
+- Added pattern matching for better Tamil language recognition
+- Post-processing improvements for common Tamil words (pudavai → saree, rupai → rupees)
 
 ### File Structure
 ```
