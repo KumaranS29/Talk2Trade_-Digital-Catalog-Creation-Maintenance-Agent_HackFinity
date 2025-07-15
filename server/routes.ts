@@ -269,12 +269,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Extract details using OpenAI
         const extractedDetails = await extractDetailsFromText(translatedText);
         
+        // Auto-create product catalog entry if extraction was successful
+        let createdProduct = null;
+        if (extractedDetails.success && extractedDetails.details) {
+          try {
+            createdProduct = await createProductFromExtraction(
+              translatedText, 
+              extractedDetails.details, 
+              transcription,
+              detectedLanguage
+            );
+          } catch (productError) {
+            console.log('Product creation failed:', productError);
+            // Don't fail the translation if product creation fails
+          }
+        }
+        
         res.json({
           detected_language: detectedLanguage,
           translated_text: translatedText,
           original_text: transcription,
           processed_text: processedTranscription,
-          extracted_details: extractedDetails
+          extracted_details: extractedDetails,
+          product_created: createdProduct
         });
         
       } catch (translateError) {
@@ -307,11 +324,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         messages: [
           {
             role: "system",
-            content: "You are an expert at extracting structured information from text. Extract key details from the given text and return them in a structured JSON format. Focus on items, quantities, prices, actions, people, places, and other meaningful information."
+            content: "You are an expert at extracting product catalog information from text. Extract product details and return them in JSON format with these fields: name (product name), description (auto-generated description), category, price (number only), quantity, unit, brand, color, size, material, origin (location mentioned), tags (array of keywords), confidence (0-1 score for extraction quality). If price currency is mentioned, include it. Focus on creating a structured product catalog entry."
           },
           {
             role: "user",
-            content: `Extract details from this text: "${text}". Return as JSON with categories like: items, quantities, prices, actions, people, places, and other relevant information.`
+            content: `Extract product catalog details from this text: "${text}". Generate a compelling product description if the original text is brief. Return structured JSON for catalog entry.`
           }
         ],
         response_format: { type: "json_object" }
@@ -332,6 +349,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
     }
   }
+
+  // Create product from extracted details
+  async function createProductFromExtraction(
+    translatedText: string, 
+    extractedDetails: any, 
+    originalText: string, 
+    detectedLanguage: string
+  ) {
+    try {
+      // Generate tags from the text
+      const tags = [
+        ...Object.values(extractedDetails).filter(v => typeof v === 'string' && v.length > 0),
+        detectedLanguage,
+        'voice-extracted'
+      ].slice(0, 10); // Limit to 10 tags
+
+      const productData = {
+        name: extractedDetails.name || "Voice Extracted Product",
+        description: extractedDetails.description || `Product mentioned: ${translatedText}`,
+        category: extractedDetails.category || "General",
+        price: typeof extractedDetails.price === 'number' ? extractedDetails.price : null,
+        currency: extractedDetails.currency || "INR",
+        quantity: typeof extractedDetails.quantity === 'number' ? extractedDetails.quantity : null,
+        unit: extractedDetails.unit || null,
+        brand: extractedDetails.brand || null,
+        color: extractedDetails.color || null,
+        size: extractedDetails.size || null,
+        material: extractedDetails.material || null,
+        origin: extractedDetails.origin || null,
+        tags: tags,
+        extractedFrom: originalText,
+        transcriptionId: null, // Would link to transcription if available
+        confidence: extractedDetails.confidence || 0.8,
+        status: "draft"
+      };
+
+      const createdProduct = await storage.createProduct(productData);
+      console.log('Created product from voice:', createdProduct);
+      return createdProduct;
+    } catch (error) {
+      console.error('Product creation error:', error);
+      throw error;
+    }
+  }
+
+  // Product catalog API routes
+  
+  // Get all products
+  app.get("/api/products", async (req, res) => {
+    try {
+      const products = await storage.getProducts();
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      res.status(500).json({ error: "Failed to fetch products" });
+    }
+  });
+
+  // Get single product
+  app.get("/api/products/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const product = await storage.getProduct(id);
+      
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      
+      res.json(product);
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      res.status(500).json({ error: "Failed to fetch product" });
+    }
+  });
+
+  // Search products
+  app.get("/api/products/search/:query", async (req, res) => {
+    try {
+      const query = req.params.query;
+      const products = await storage.searchProducts(query);
+      res.json(products);
+    } catch (error) {
+      console.error("Error searching products:", error);
+      res.status(500).json({ error: "Failed to search products" });
+    }
+  });
+
+  // Get products by category
+  app.get("/api/products/category/:category", async (req, res) => {
+    try {
+      const category = req.params.category;
+      const products = await storage.getProductsByCategory(category);
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching products by category:", error);
+      res.status(500).json({ error: "Failed to fetch products by category" });
+    }
+  });
+
+  // Create product manually
+  app.post("/api/products", async (req, res) => {
+    try {
+      const productData = req.body;
+      
+      // Basic validation
+      if (!productData.name) {
+        return res.status(400).json({ error: "Product name is required" });
+      }
+
+      const createdProduct = await storage.createProduct(productData);
+      res.status(201).json(createdProduct);
+    } catch (error) {
+      console.error("Error creating product:", error);
+      res.status(500).json({ error: "Failed to create product" });
+    }
+  });
+
+  // Update product
+  app.put("/api/products/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const updatedProduct = await storage.updateProduct(id, updates);
+      
+      if (!updatedProduct) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      
+      res.json(updatedProduct);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      res.status(500).json({ error: "Failed to update product" });
+    }
+  });
+
+  // Delete product
+  app.delete("/api/products/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteProduct(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      
+      res.json({ success: true, message: "Product deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      res.status(500).json({ error: "Failed to delete product" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

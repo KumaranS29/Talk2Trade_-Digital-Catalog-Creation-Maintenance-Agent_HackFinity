@@ -32,3 +32,36 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Product catalog schema
+export const products = pgTable("products", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category"),
+  price: real("price"),
+  currency: text("currency").default("INR"),
+  quantity: real("quantity"),
+  unit: text("unit"), // e.g., "pieces", "kg", "meters"
+  brand: text("brand"),
+  color: text("color"),
+  size: text("size"),
+  material: text("material"),
+  origin: text("origin"), // location/place mentioned
+  tags: text("tags").array(), // searchable keywords
+  extractedFrom: text("extracted_from"), // original transcription text
+  transcriptionId: serial("transcription_id").references(() => transcriptions.id),
+  confidence: real("confidence"), // AI extraction confidence
+  status: text("status").default("draft"), // draft, reviewed, published
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type Product = typeof products.$inferSelect;

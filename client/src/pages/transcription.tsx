@@ -256,31 +256,7 @@ export default function TranscriptionPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <Mic className="text-white text-lg" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-slate-900">Voice Transcription</h1>
-                <p className="text-sm text-slate-500">Local Language to English</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">
-                <Circle className="w-2 h-2 mr-1 fill-current text-emerald-400" />
-                System Ready
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Recording Interface */}
         <Card className="mb-8">
           <CardContent className="p-8">
@@ -647,32 +623,65 @@ export default function TranscriptionPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 mt-12">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-slate-500">Powered by OpenAI Whisper</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
-                <span className="text-xs text-slate-500">API Status: Active</span>
+        {/* Real-time Product Creation Notification */}
+        {translateMutation.data?.product_created && (
+          <Card className="mb-8 border-green-200 bg-green-50">
+            <CardContent className="p-6">
+              <div className="flex items-start space-x-3">
+                <Package className="w-6 h-6 text-green-600 mt-1" />
+                <div className="flex-1">
+                  <h3 className="font-medium text-green-900 mb-2">Product Catalog Entry Created!</h3>
+                  <p className="text-green-800 mb-3">
+                    Automatically extracted product details and created catalog entry from your voice input.
+                  </p>
+                  <div className="bg-white rounded-lg p-3 border border-green-200">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><strong>Name:</strong> {translateMutation.data.product_created.name}</div>
+                      <div><strong>Category:</strong> {translateMutation.data.product_created.category}</div>
+                      {translateMutation.data.product_created.price && (
+                        <div><strong>Price:</strong> {translateMutation.data.product_created.currency} {translateMutation.data.product_created.price}</div>
+                      )}
+                      <div><strong>Status:</strong> {translateMutation.data.product_created.status}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => window.location.href = '/catalog'}>
+                      <Package className="w-4 h-4 mr-1" />
+                      View in Catalog
+                    </Button>
+                    <span className="text-sm text-green-700">Product ID: #{translateMutation.data.product_created.id}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Footer */}
+        <footer className="bg-white border-t border-slate-200 mt-12 -mx-4">
+          <div className="max-w-4xl mx-auto px-4 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-slate-500">Powered by AssemblyAI & Google Translate</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
+                  <span className="text-xs text-slate-500">API Status: Active</span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <button className="text-sm text-slate-500 hover:text-slate-700">
+                  <Settings className="w-4 h-4 mr-1 inline" />
+                  Settings
+                </button>
+                <button className="text-sm text-slate-500 hover:text-slate-700">
+                  <HelpCircle className="w-4 h-4 mr-1 inline" />
+                  Help
+                </button>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <button className="text-sm text-slate-500 hover:text-slate-700">
-                <Settings className="w-4 h-4 mr-1 inline" />
-                Settings
-              </button>
-              <button className="text-sm text-slate-500 hover:text-slate-700">
-                <HelpCircle className="w-4 h-4 mr-1 inline" />
-                Help
-              </button>
-            </div>
           </div>
-        </div>
-      </footer>
-    </div>
+        </footer>
+      </div>
   );
 }
