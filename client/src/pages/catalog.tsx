@@ -33,11 +33,10 @@ import { insertProductSchema } from "@shared/schema";
 import type { Product } from "@shared/schema";
 import { z } from "zod";
 
-// Form schema for product creation/editing
+// Form schema for product creation/editing - Talk2Trade format
 const productFormSchema = insertProductSchema.extend({
   price: z.coerce.number().positive().optional().or(z.literal("")),
   quantity: z.coerce.number().positive().optional().or(z.literal("")),
-  confidence: z.coerce.number().min(0).max(1).optional().or(z.literal("")),
 });
 
 type ProductForm = z.infer<typeof productFormSchema>;
@@ -59,12 +58,11 @@ export default function CatalogPage() {
   // Get unique categories for filtering
   const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
 
-  // Filter products based on search and category
+  // Filter products based on search and category - Talk2Trade format
   const filteredProducts = products.filter((product: Product) => {
     const matchesSearch = !searchQuery || 
-      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      product.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
     
@@ -94,9 +92,9 @@ export default function CatalogPage() {
     },
   });
 
-  // Update product mutation
+  // Update product mutation - Talk2Trade format
   const updateProductMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: ProductForm }) => {
+    mutationFn: async ({ id, data }: { id: string; data: ProductForm }) => {
       const response = await apiRequest("PUT", `/api/products/${id}`, data);
       return response.json();
     },
@@ -117,9 +115,9 @@ export default function CatalogPage() {
     },
   });
 
-  // Delete product mutation
+  // Delete product mutation - Talk2Trade format
   const deleteProductMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const response = await apiRequest("DELETE", `/api/products/${id}`);
       return response.json();
     },
@@ -139,24 +137,15 @@ export default function CatalogPage() {
     },
   });
 
-  // Form for creating/editing products
+  // Form for creating/editing products - Talk2Trade format
   const form = useForm<ProductForm>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
-      name: "",
+      title: "",
       description: "",
       category: "",
       price: "",
-      currency: "INR",
       quantity: "",
-      unit: "",
-      brand: "",
-      color: "",
-      size: "",
-      material: "",
-      origin: "",
-      tags: [],
-      status: "draft",
     },
   });
 
@@ -169,39 +158,28 @@ export default function CatalogPage() {
     }
   }, [editingProduct, createProductMutation, updateProductMutation]);
 
-  // Handle product editing
+  // Handle product editing - Talk2Trade format
   const handleEdit = useCallback((product: Product) => {
     setEditingProduct(product);
     form.reset({
-      name: product.name || "",
+      title: product.title || "",
       description: product.description || "",
       category: product.category || "",
       price: product.price?.toString() || "",
-      currency: product.currency || "INR",
       quantity: product.quantity?.toString() || "",
-      unit: product.unit || "",
-      brand: product.brand || "",
-      color: product.color || "",
-      size: product.size || "",
-      material: product.material || "",
-      origin: product.origin || "",
-      tags: product.tags || [],
-      status: product.status || "draft",
     });
   }, [form]);
 
-  // Handle product deletion
-  const handleDelete = useCallback((id: number) => {
+  // Handle product deletion - Talk2Trade format  
+  const handleDelete = useCallback((id: string) => {
     if (confirm("Are you sure you want to delete this product?")) {
       deleteProductMutation.mutate(id);
     }
   }, [deleteProductMutation]);
 
-  // Calculate statistics
+  // Calculate statistics - Talk2Trade format
   const stats = {
     total: products.length,
-    published: products.filter((p: Product) => p.status === "published").length,
-    draft: products.filter((p: Product) => p.status === "draft").length,
     categories: categories.length,
   };
 
@@ -396,26 +374,23 @@ export default function CatalogPage() {
   );
 }
 
-// Product Card Component
+// Product Card Component - Talk2Trade format
 interface ProductCardProps {
   product: Product;
   viewMode: "grid" | "list";
   onEdit: (product: Product) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 function ProductCard({ product, viewMode, onEdit, onDelete }: ProductCardProps) {
-  const formatPrice = (price: number | null, currency: string | null) => {
+  const formatPrice = (price: number | null) => {
     if (!price) return "Price not set";
-    return `${currency || "INR"} ${price.toLocaleString()}`;
+    return `₹${price.toLocaleString()}`;
   };
 
-  const getStatusColor = (status: string | null) => {
-    switch (status) {
-      case "published": return "bg-green-100 text-green-800";
-      case "reviewed": return "bg-blue-100 text-blue-800";
-      default: return "bg-orange-100 text-orange-800";
-    }
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString();
   };
 
   if (viewMode === "list") {
@@ -424,22 +399,22 @@ function ProductCard({ product, viewMode, onEdit, onDelete }: ProductCardProps) 
         <div className="flex items-center justify-between">
           <div className="flex-1 grid grid-cols-4 gap-4 items-center">
             <div>
-              <h3 className="font-medium text-slate-900">{product.name}</h3>
+              <h3 className="font-medium text-slate-900">{product.title}</h3>
               <p className="text-sm text-slate-500">{product.category}</p>
             </div>
             <div className="text-sm">
-              <div className="font-medium">{formatPrice(product.price, product.currency)}</div>
+              <div className="font-medium">{formatPrice(product.price)}</div>
               <div className="text-slate-500">
-                {product.quantity ? `${product.quantity} ${product.unit || 'units'}` : 'Qty not set'}
+                {product.quantity ? `Qty: ${product.quantity}` : 'Qty not set'}
               </div>
             </div>
             <div>
-              <Badge className={getStatusColor(product.status)}>
-                {product.status || 'draft'}
+              <Badge className="bg-green-100 text-green-800">
+                Active
               </Badge>
             </div>
             <div className="text-sm text-slate-500">
-              {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : 'N/A'}
+              {formatDate(product.last_updated)}
             </div>
           </div>
           <div className="flex items-center space-x-2 ml-4">
@@ -460,11 +435,11 @@ function ProductCard({ product, viewMode, onEdit, onDelete }: ProductCardProps) 
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg">{product.name}</CardTitle>
+            <CardTitle className="text-lg">{product.title}</CardTitle>
             <p className="text-sm text-slate-500 mt-1">{product.category}</p>
           </div>
-          <Badge className={getStatusColor(product.status)}>
-            {product.status || 'draft'}
+          <Badge className="bg-green-100 text-green-800">
+            Active
           </Badge>
         </div>
       </CardHeader>
@@ -478,33 +453,18 @@ function ProductCard({ product, viewMode, onEdit, onDelete }: ProductCardProps) 
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-1">
               <DollarSign className="w-4 h-4 text-slate-400" />
-              <span className="font-medium">{formatPrice(product.price, product.currency)}</span>
+              <span className="font-medium">{formatPrice(product.price)}</span>
             </div>
             {product.quantity && (
               <span className="text-sm text-slate-500">
-                {product.quantity} {product.unit || 'units'}
+                Qty: {product.quantity}
               </span>
             )}
           </div>
           
-          {product.tags && product.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {product.tags.slice(0, 3).map((tag, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
-              {product.tags.length > 3 && (
-                <Badge variant="secondary" className="text-xs">
-                  +{product.tags.length - 3}
-                </Badge>
-              )}
-            </div>
-          )}
-          
           <div className="flex items-center justify-between pt-2 border-t">
             <span className="text-xs text-slate-500">
-              {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : 'N/A'}
+              {formatDate(product.last_updated)}
             </span>
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm" onClick={() => onEdit(product)}>
@@ -541,12 +501,12 @@ function ProductFormDialog({ form, onSubmit, isLoading, title }: ProductFormDial
           <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="name"
+              name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Product Name *</FormLabel>
+                  <FormLabel>Product Title *</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Enter product name" />
+                    <Input {...field} placeholder="Enter product title" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -560,7 +520,7 @@ function ProductFormDialog({ form, onSubmit, isLoading, title }: ProductFormDial
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="e.g., Electronics, Clothing" />
+                    <Input {...field} placeholder="e.g., Health & Beauty > Soap" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -582,38 +542,15 @@ function ProductFormDialog({ form, onSubmit, isLoading, title }: ProductFormDial
             )}
           />
           
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="price"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Price</FormLabel>
+                  <FormLabel>Price (₹)</FormLabel>
                   <FormControl>
                     <Input {...field} type="number" placeholder="0.00" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="currency"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Currency</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="INR">INR</SelectItem>
-                        <SelectItem value="USD">USD</SelectItem>
-                        <SelectItem value="EUR">EUR</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -635,118 +572,7 @@ function ProductFormDialog({ form, onSubmit, isLoading, title }: ProductFormDial
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="brand"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Brand</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Brand name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="unit"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Unit</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="e.g., pieces, kg, meters" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          
-          <div className="grid grid-cols-3 gap-4">
-            <FormField
-              control={form.control}
-              name="color"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Color</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Product color" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="size"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Size</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Product size" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="material"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Material</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Material type" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="origin"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Origin</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Place of origin" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="reviewed">Reviewed</SelectItem>
-                        <SelectItem value="published">Published</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+
           
           <div className="flex justify-end space-x-2">
             <Button type="submit" disabled={isLoading}>
